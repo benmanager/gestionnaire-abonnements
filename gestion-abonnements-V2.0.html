@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestionnaire d'Abonnements</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#3b82f6" />
+  <link rel="apple-touch-icon" href="https://benmanager.kneo.me/files/Ben_Manager_Labs/icon-Gestion-abonnements-512x512.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gray: { 75: '#2d3748' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .dark { color-scheme: dark; }
+    .currency-selector {
+      background: #1f2937;
+      color: white;
+      border: 1px solid #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+    .currency-selector option {
+      background: #1f2937;
+      color: white;
+    }
+    .alert-popup {
+      position: relative;
+      margin: 16px auto 0;
+      max-width: 896px; /* Tailwind max-w-7xl */
+      z-index: 10;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
+  <div id="app">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+      <div class="max-w-7xl mx-auto flex flex-wrap md:flex-nowrap justify-between items-center gap-4">
+        <div class="flex items-center gap-4">
+          <img src="https://benmanager.kneo.me/files/Ben_Manager_Labs/icon-+Gestion-abonnements-512x512.png" alt="Logo" class="w-10 h-10 rounded-lg">
+          <div>
+            <h1 class="text-3xl font-bold">Gestionnaire d'Abonnements</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Suivez vos paiements récurrents</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <select id="currencySelector" class="currency-selector">
+            <option value="EUR">€ (EUR)</option>
+            <option value="USD">$ (USD)</option>
+          </select>
+          <div class="text-right">
+            <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="totalCurrentMonth">0.00€</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400" id="currentMonthLabel">Décembre 2025</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Alert Popup -->
+    <div id="alertPopup" class="alert-popup hidden">
+      <div class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg shadow-lg">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle text-xl"></i>
+            <span id="alertMessage"></span>
+          </div>
+          <button id="closeAlert" class="text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="max-w-7xl mx-auto p-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Total Mensuel</p>
+              <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="monthlyCost">0.00€</p>
+            </div>
+            <div class="p-3 bg-blue-100 dark:bg-blue-500/20 rounded-lg">
+              <i class="fas fa-calendar-alt text-blue-600 dark:text-blue-400 text-lg"></i>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Total Annuel</p>
+              <p class="text-2xl font-bold text-green-600 dark:text-green-400" id="annualCost">0.00€</p>
+            </div>
+            <div class="p-3 bg-green-100 dark:bg-green-500/20 rounded-lg">
+              <i class="fas fa-calendar text-green-600 dark:text-green-400 text-lg"></i>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Nombre d'abonnements</p>
+              <p class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="subCount">0</p>
+            </div>
+            <div class="p-3 bg-purple-100 dark:bg-purple-500/20 rounded-lg">
+              <i class="fas fa-check-circle text-purple-600 dark:text-purple-400 text-lg"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscriptions List -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Vos Abonnements</h2>
+          <button id="addBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <i class="fas fa-plus text-sm"></i> Ajouter
+          </button>
+        </div>
+        <div id="subscriptionsList" class="divide-y divide-gray-200 dark:divide-gray-700"></div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-xl">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 id="modalTitle" class="text-xl font-semibold">Ajouter un abonnement</h3>
+        </div>
+        <form id="subscriptionForm" class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Nom</label>
+            <input type="text" id="name" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Montant</label>
+              <input type="number" id="amount" step="0.01" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Devise</label>
+              <select id="currency" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="EUR">€ (EUR)</option>
+                <option value="USD">$ (USD)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Fréquence</label>
+              <select id="frequency" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="monthly">Mensuel</option>
+                <option value="yearly">Annuel</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Catégorie</label>
+              <select id="category" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Streaming">Streaming</option>
+                <option value="Music">Musique</option>
+                <option value="Software">Logiciel</option>
+                <option value="Gaming">Jeu</option>
+                <option value="Health">Santé</option>
+                <option value="Education">Éducation</option>
+                <option value="Other">Autre</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Date d'activation</label>
+            <input type="date" id="startDate" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Jour de prélèvement</label>
+            <input type="number" id="paymentDay" min="1" max="31" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Couleur</label>
+            <div class="flex gap-2">
+              <button type="button" data-color="bg-blue-500" class="w-8 h-8 rounded-full bg-blue-500 color-option"></button>
+              <button type="button" data-color="bg-red-500" class="w-8 h-8 rounded-full bg-red-500 color-option"></button>
+              <button type="button" data-color="bg-green-500" class="w-8 h-8 rounded-full bg-green-500 color-option"></button>
+              <button type="button" data-color="bg-purple-500" class="w-8 h-8 rounded-full bg-purple-500 color-option"></button>
+              <button type="button" data-color="bg-pink-500" class="w-8 h-8 rounded-full bg-pink-500 color-option"></button>
+              <button type="button" data-color="bg-yellow-500" class="w-8 h-8 rounded-full bg-yellow-500 color-option"></button>
+              <button type="button" data-color="bg-indigo-500" class="w-8 h-8 rounded-full bg-indigo-500 color-option"></button>
+            </div>
+            <input type="hidden" id="selectedColor" value="bg-blue-500">
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button type="button" id="cancelBtn" class="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 rounded-lg transition-colors">Annuler</button>
+            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors">
+              <span id="submitBtnText">Ajouter</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== DONNÉES & LOGIQUE IDENTIQUE À TA VERSION ======
+    let subscriptions = JSON.parse(localStorage.getItem('subscriptions')) || [];
+    let editingId = null;
+    let currentCurrency = 'EUR';
+
+    const subscriptionsList = document.getElementById('subscriptionsList');
+    const modal = document.getElementById('modal');
+    const addBtn = document.getElementById('addBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const subscriptionForm = document.getElementById('subscriptionForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const currencySelector = document.getElementById('currencySelector');
+    const alertPopup = document.getElementById('alertPopup');
+    const alertMessage = document.getElementById('alertMessage');
+    const closeAlert = document.getElementById('closeAlert');
+    const totalCurrentMonth = document.getElementById('totalCurrentMonth');
+    const currentMonthLabel = document.getElementById('currentMonthLabel');
+
+    const exchangeRates = { 'EUR': 1, 'USD': 0.85 };
+    const reverseRates = { 'EUR': 1, 'USD': 1.18 };
+
+    function saveToStorage() {
+      localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
+    }
+
+    function getNextPaymentDate(startDate, paymentDay, frequency) {
+      const start = new Date(startDate);
+      const today = new Date();
+      if (frequency === 'monthly') {
+        let nextPayment = new Date(today.getFullYear(), today.getMonth(), paymentDay);
+        if (nextPayment < today) nextPayment = new Date(today.getFullYear(), today.getMonth() + 1, paymentDay);
+        const daysInMonth = new Date(nextPayment.getFullYear(), nextPayment.getMonth() + 1, 0).getDate();
+        if (paymentDay > daysInMonth) nextPayment = new Date(nextPayment.getFullYear(), nextPayment.getMonth() + 1, 0);
+        else nextPayment = new Date(nextPayment.getFullYear(), nextPayment.getMonth(), paymentDay);
+        return nextPayment;
+      } else {
+        let nextPayment = new Date(today.getFullYear(), start.getMonth(), paymentDay);
+        if (nextPayment < today) nextPayment = new Date(today.getFullYear() + 1, start.getMonth(), paymentDay);
+        const daysInMonth = new Date(nextPayment.getFullYear(), nextPayment.getMonth() + 1, 0).getDate();
+        if (paymentDay > daysInMonth) nextPayment = new Date(nextPayment.getFullYear(), nextPayment.getMonth() + 1, 0);
+        else nextPayment = new Date(nextPayment.getFullYear(), nextPayment.getMonth(), paymentDay);
+        return nextPayment;
+      }
+    }
+
+    function convertAmount(amount, fromCurrency, toCurrency) {
+      if (fromCurrency === toCurrency) return amount;
+      if (toCurrency === 'EUR' && fromCurrency === 'USD') return amount * exchangeRates['USD'];
+      if (toCurrency === 'USD' && fromCurrency === 'EUR') return amount * reverseRates['USD'];
+      return amount;
+    }
+
+    function calculateTotals() {
+      const today = new Date();
+      const monthlyCost = subscriptions.filter(s => s.frequency === 'monthly').reduce((sum, s) => sum + convertAmount(s.amount, s.currency, currentCurrency), 0);
+      const annualCost = subscriptions.filter(s => s.frequency === 'yearly').reduce((sum, s) => sum + convertAmount(s.amount, s.currency, currentCurrency), 0);
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const currentMonthPayments = subscriptions.reduce((sum, s) => {
+        const nextPayment = getNextPaymentDate(s.startDate, s.paymentDay, s.frequency);
+        if (nextPayment.getMonth() === currentMonth && nextPayment.getFullYear() === currentYear) {
+          return sum + convertAmount(s.amount, s.currency, currentCurrency);
+        }
+        return sum;
+      }, 0);
+      const currencySymbol = currentCurrency === 'EUR' ? '€' : '$';
+      document.getElementById('monthlyCost').textContent = monthlyCost.toFixed(2) + currencySymbol;
+      document.getElementById('annualCost').textContent = annualCost.toFixed(2) + currencySymbol;
+      document.getElementById('subCount').textContent = subscriptions.length;
+      totalCurrentMonth.textContent = currentMonthPayments.toFixed(2) + currencySymbol;
+      const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      currentMonthLabel.textContent = `${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+    }
+
+    function getDaysUntilPayment(nextPaymentDate) {
+      const today = new Date();
+      const nextPayment = new Date(nextPaymentDate);
+      return Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function getAlertStatus(days) {
+      if (days <= 0) return { status: 'overdue', color: 'text-red-500', icon: 'fa-triangle-exclamation' };
+      if (days <= 3) return { status: 'urgent', color: 'text-orange-500', icon: 'fa-triangle-exclamation' };
+      if (days <= 7) return { status: 'soon', color: 'text-yellow-500', icon: 'fa-calendar-day' };
+      return { status: 'normal', color: 'text-green-500', icon: 'fa-check-circle' };
+    }
+
+    function showAlerts() {
+      const today = new Date();
+      const alerts = [];
+      subscriptions.forEach(sub => {
+        const nextPayment = getNextPaymentDate(sub.startDate, sub.paymentDay, sub.frequency);
+        const daysUntil = getDaysUntilPayment(nextPayment);
+        if (daysUntil <= 30 && daysUntil >= 0) {
+          alerts.push({ name: sub.name, days: daysUntil, date: nextPayment.toLocaleDateString(), amount: sub.amount, currency: sub.currency });
+        }
+      });
+      if (alerts.length > 0) {
+        const alertText = alerts.map(a => `${a.name}: ${a.days} jours (${a.amount}${a.currency === 'EUR' ? '€' : '$'} le ${a.date})`).join(', ');
+        alertMessage.textContent = `Paiements à venir: ${alertText}`;
+        alertPopup.classList.remove('hidden');
+        setTimeout(() => alertPopup.classList.add('hidden'), 10000);
+      }
+    }
+
+    function renderSubscriptions() {
+      subscriptionsList.innerHTML = '';
+      subscriptions.forEach(sub => {
+        const nextPayment = getNextPaymentDate(sub.startDate, sub.paymentDay, sub.frequency);
+        const daysUntil = getDaysUntilPayment(nextPayment);
+        const alert = getAlertStatus(daysUntil);
+        const convertedAmount = convertAmount(sub.amount, sub.currency, currentCurrency);
+        const currencySymbol = currentCurrency === 'EUR' ? '€' : '$';
+        const subscriptionEl = document.createElement('div');
+        subscriptionEl.className = 'p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+        subscriptionEl.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-4 h-4 rounded-full ${sub.color}"></div>
+              <div>
+                <h3 class="font-semibold text-lg">${sub.name}</h3>
+                <div class="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <span>${convertedAmount.toFixed(2)}${currencySymbol} / ${sub.frequency === 'monthly' ? 'mois' : 'an'}</span>
+                  <span>${sub.category}</span>
+                  <span class="flex items-center gap-1">
+                    <i class="fas ${alert.icon} ${alert.color}"></i>
+                    ${daysUntil <= 0 ? 'Payé' : `${daysUntil} jours`}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg font-semibold">${convertedAmount.toFixed(2)}${currencySymbol}</span>
+              <span class="text-gray-600 dark:text-gray-400">le ${nextPayment.toLocaleDateString()}</span>
+              <button onclick="editSubscription(${sub.id})" class="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deleteSubscription(${sub.id})" class="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="h-2 rounded-full ${daysUntil <= 0 ? 'bg-red-500' : daysUntil <= 3 ? 'bg-orange-500' : daysUntil <= 7 ? 'bg-yellow-500' : 'bg-green-500'}" style="width: ${Math.max(0, Math.min(100, 100 - (daysUntil / 30) * 100))}%"></div>
+            </div>
+          </div>
+        `;
+        subscriptionsList.appendChild(subscriptionEl);
+      });
+      calculateTotals();
+      showAlerts();
+    }
+
+    function openModal() {
+      const today = new Date();
+      document.getElementById('name').value = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('currency').value = 'EUR';
+      document.getElementById('frequency').value = 'monthly';
+      document.getElementById('category').value = 'Streaming';
+      document.getElementById('startDate').value = '';
+      document.getElementById('paymentDay').value = today.getDate();
+      document.getElementById('selectedColor').value = 'bg-blue-500';
+      document.querySelectorAll('.color-option').forEach(btn => btn.classList.remove('ring-2','ring-white','ring-offset-2','ring-offset-gray-800'));
+      document.querySelector('.color-option').classList.add('ring-2','ring-white','ring-offset-2','ring-offset-gray-800');
+      editingId = null;
+      modalTitle.textContent = 'Ajouter un abonnement';
+      submitBtnText.textContent = 'Ajouter';
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() { modal.classList.add('hidden'); }
+
+    function saveSubscription(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const currency = document.getElementById('currency').value;
+      const frequency = document.getElementById('frequency').value;
+      const category = document.getElementById('category').value;
+      const startDate = document.getElementById('startDate').value;
+      const paymentDay = parseInt(document.getElementById('paymentDay').value);
+      const color = document.getElementById('selectedColor').value;
+      if (editingId) {
+        subscriptions = subscriptions.map(s => s.id === editingId ? { ...s, name, amount, currency, frequency, category, startDate, paymentDay, color } : s);
+      } else {
+        const newId = subscriptions.length > 0 ? Math.max(...subscriptions.map(s => s.id)) + 1 : 1;
+        subscriptions.push({ id: newId, name, amount, currency, frequency, category, startDate, paymentDay, color });
+      }
+      saveToStorage();
+      renderSubscriptions();
+      closeModal();
+    }
+
+    function editSubscription(id) {
+      const sub = subscriptions.find(s => s.id === id);
+      if (!sub) return;
+      document.getElementById('name').value = sub.name;
+      document.getElementById('amount').value = sub.amount;
+      document.getElementById('currency').value = sub.currency;
+      document.getElementById('frequency').value = sub.frequency;
+      document.getElementById('category').value = sub.category;
+      document.getElementById('startDate').value = sub.startDate;
+      document.getElementById('paymentDay').value = sub.paymentDay;
+      document.getElementById('selectedColor').value = sub.color;
+      document.querySelectorAll('.color-option').forEach(btn => {
+        btn.classList.remove('ring-2','ring-white','ring-offset-2','ring-offset-gray-800');
+        if (btn.dataset.color === sub.color) btn.classList.add('ring-2','ring-white','ring-offset-2','ring-offset-gray-800');
+      });
+      editingId = id;
+      modalTitle.textContent = 'Modifier l\'abonnement';
+      submitBtnText.textContent = 'Modifier';
+      modal.classList.remove('hidden');
+    }
+
+    function deleteSubscription(id) {
+      if (confirm('Êtes-vous sûr de vouloir supprimer cet abonnement ?')) {
+        subscriptions = subscriptions.filter(s => s.id !== id);
+        saveToStorage();
+        renderSubscriptions();
+      }
+    }
+
+    function changeCurrency() {
+      currentCurrency = currencySelector.value;
+      renderSubscriptions();
+    }
+
+    addBtn.addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', closeModal);
+    subscriptionForm.addEventListener('submit', saveSubscription);
+    currencySelector.addEventListener('change', changeCurrency);
+    closeAlert.addEventListener('click', () => alertPopup.classList.add('hidden'));
+
+    document.querySelectorAll('.color-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-option').forEach(b => b.classList.remove('ring-2','ring-white','ring-offset-2','ring-offset-gray-800'));
+        btn.classList.add('ring-2','ring-white','ring-offset-2','ring-offset-gray-800');
+        document.getElementById('selectedColor').value = btn.dataset.color;
+      });
+    });
+
+    renderSubscriptions();
+    setInterval(showAlerts, 30000);
+  </script>
+</body>
+</html>

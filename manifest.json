@@ -1,0 +1,24 @@
+{
+  "short_name": "Abos",
+  "name": "Gestionnaire d'Abonnements",
+  "description": "Suivez et gérez facilement tous vos abonnements récurrents.",
+  "icons": [
+    {
+      "src": "https://benmanager.kneo.me/files/Ben_Manager_Labs/icon-Gestion-abonnements-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://benmanager.kneo.me/files/Ben_Manager_Labs/icon-Gestion-abonnements-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "lang": "fr-FR"
+}
